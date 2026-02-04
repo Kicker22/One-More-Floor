@@ -13,24 +13,14 @@ public class PlayerMovement : MonoBehaviour
     public Rigidbody rb;
     [Tooltip("Reference to unity input system for player controls")]
     InputAction moveAction;
-
+    
     private Animator animator;
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
         moveAction = InputSystem.actions.FindAction("Move");
-        // Get animator from child if not on this GameObject
         animator = GetComponentInChildren<Animator>();
-        
-        if (animator == null)
-        {
-            Debug.LogError("Animator not found on " + gameObject.name);
-        }
-        else
-        {
-            Debug.Log("Animator found on " + animator.gameObject.name);
-        }
     }
 
     void FixedUpdate()
@@ -44,36 +34,32 @@ public class PlayerMovement : MonoBehaviour
         
         if (moveDirection.magnitude >= 0.1f)
         {
-            // Move the character
-            Vector3 move = moveDirection.normalized * speed * Time.fixedDeltaTime;
-            rb.MovePosition(rb.position + move);
+            // Move the character using velocity for more responsive movement
+            Vector3 targetVelocity = moveDirection.normalized * speed;
+            targetVelocity.y = rb.linearVelocity.y; // Preserve vertical velocity for gravity
+            rb.linearVelocity = targetVelocity;
             
             // Smoothly rotate to face movement direction
             Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
             Quaternion newRotation = Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
             rb.MoveRotation(newRotation);
             
-            // Update animator for walking/running animation
+            // Update animator speed parameter
             if (animator != null)
             {
                 animator.SetFloat("Speed", inputVector.magnitude);
-                Debug.Log("Setting Speed to: " + inputVector.magnitude);
             }
         }
         else
         {
-            // Player is idle - set speed to 0
+            // Stop horizontal movement when no input
+            rb.linearVelocity = new Vector3(0, rb.linearVelocity.y, 0);
+            
+            // Player is idle
             if (animator != null)
             {
                 animator.SetFloat("Speed", 0f);
             }
         }
-    }
-
-    // Called by animation events for footstep sounds
-    void OnFootstep()
-    {
-        // TODO: Add footstep sound effect here
-        // Example: AudioSource.PlayClipAtPoint(footstepSound, transform.position);
     }
 }

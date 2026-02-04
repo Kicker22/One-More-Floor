@@ -1,24 +1,23 @@
 using UnityEngine;
 
-public class TestEnemyCombat : MonoBehaviour, IDamageable
+public class TestEnemyCombat : MonoBehaviour, IDamageable, IExperienceSource
 {
     [SerializeField] private int damageAmount = 10;
     [SerializeField] private float attackInterval = 1.0f;
     [SerializeField] private float attackRange = 2f;
 
     [SerializeField] private int enemyHealth = 100;
+    [SerializeField] private int xpReward = 25; // NEW
     
     private float nextAttackTime = 0f;
     private Transform player;
 
     void Start()
     {
-
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null)
         {
             player = playerObj.transform;
-            // Debug.Log("Enemy found player: " + player.name);
         }
         else
         {
@@ -58,11 +57,22 @@ public class TestEnemyCombat : MonoBehaviour, IDamageable
         }
     }
 
+    // NEW - Interface implementation
+    public int GetExperienceReward()
+    {
+        return xpReward;
+    }
 
     private void Die()
     {
         Debug.Log("Enemy died.");
-        // Add death logic here (e.g., play animation, drop loot, destroy object)
+        
+        // Award XP to player
+        if (ExperienceManager.Instance != null)
+        {
+            ExperienceManager.Instance.AwardExperience(xpReward);
+        }
+        
         Destroy(gameObject);
     }
 }

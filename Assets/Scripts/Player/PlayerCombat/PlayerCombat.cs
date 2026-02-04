@@ -11,10 +11,12 @@ public class PlayerCombat : MonoBehaviour
     
     private InputAction attackAction;
     private float nextAttackTime = 0f;
+    private Animator animator;
 
     void Start()
     {
         attackAction = InputSystem.actions.FindAction("Attack");
+        animator = GetComponentInChildren<Animator>();
     }
 
     void Update()
@@ -27,7 +29,13 @@ public class PlayerCombat : MonoBehaviour
     }
 
     void PerformMeleeAttack()
-    {        
+    {
+        // Trigger attack animation
+        if (animator != null)
+        {
+            animator.SetTrigger("Attack");
+        }
+        
         // Find all enemies in attack range
         Collider[] hitEnemies = Physics.OverlapSphere(transform.position, meleeRange, enemyLayer);
         
