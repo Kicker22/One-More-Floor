@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 
 public class TestEnemyCombat : MonoBehaviour, IDamageable, IExperienceSource
 {
@@ -7,10 +8,17 @@ public class TestEnemyCombat : MonoBehaviour, IDamageable, IExperienceSource
     [SerializeField] private float attackRange = 2f;
 
     [SerializeField] private int enemyHealth = 100;
-    [SerializeField] private int xpReward = 25; // NEW
+    [SerializeField] private int xpReward = 25;
+    
+    [Header("Damage Flash")]
+    [SerializeField] private Color damageFlashColor = Color.red;
+    [SerializeField] private float flashDuration = 0.1f;
     
     private float nextAttackTime = 0f;
     private Transform player;
+    private Renderer[] enemyRenderers;
+    private Color[] originalColors;
+    private Coroutine flashCoroutine;
 
     void Start()
     {
@@ -23,12 +31,38 @@ public class TestEnemyCombat : MonoBehaviour, IDamageable, IExperienceSource
         {
             Debug.LogError("No GameObject with 'Player' tag found!");
         }
+        
+        // Get all renderers and store their original colors
+        enemyRenderers = GetComponentsInChildren<Renderer>();
+        if (enemyRenderers.Length > 0)
+        {
+            originalColors = new Color[enemyRenderers.Length];
+            for (int i = 0; i < enemyRenderers.Length; i++)
+            {
+                originalColors[i] = enemyRenderers[i].material.color;
+            }
+        }
+        else
+        {
+            Debug.LogWarning("No Renderer found on enemy or its children. Damage flash will not work.");
+        }
     }
 
     public void TakeDamage(int amount)
     {
         enemyHealth -= amount;
         Debug.Log("Enemy took " + amount + " damage. Remaining health: " + enemyHealth);
+        
+        // Trigger damage flash effect
+        if (enemyRenderers != null && enemyRenderers.Length > 0)
+        {
+            if (flashCoroutine != null)
+            {
+                StopCoroutine(flashCoroutine);
+            }
+            flashCoroutine = StartCoroutine(FlashDamage());
+        }
+        
         if (enemyHealth <= 0)
         {
             Die();
@@ -62,10 +96,31 @@ public class TestEnemyCombat : MonoBehaviour, IDamageable, IExperienceSource
     {
         return xpReward;
     }
+    
+    private IEnumerator FlashDamage()
+    {
+        // Change all renderers to damage color
+        for (int i = 0; i < enemyRenderers.Length; i++)
+        {
+            enemyRenderers[i].material.color = damageFlashColor;
+        }
+        
+        // Wait for the flash duration
+        yield return new WaitForSeconds(flashDuration);
+        
+        // Return all renderers to original colors
+        for (int i = 0; i < enemyRenderers.Length; i++)
+        {
+            enemyRenderers[i].material.color = originalColors[i];
+        }
+        flashCoroutine = null;
+    }
 
     private void Die()
     {
         Debug.Log("Enemy died.");
+
+        EnemyDefeatEvents.RaiseEnemyDefeated();
         
         // Award XP to player
         if (ExperienceManager.Instance != null)
